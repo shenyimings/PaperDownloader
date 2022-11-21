@@ -5,11 +5,11 @@ A Downloader Powered By Sci-Hub, Python Experience.
 
 ## Develop Log
 
-- Multithreading
-- Modularized
-- Log system
-- Downloader
-- Paper Finder
+- Multithreading        TBD...
+- Modularized           Done.
+- Log system            TBD...
+- Downloader            Done.
+- Paper Finder          Done.
 
 
 
