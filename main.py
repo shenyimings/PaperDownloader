@@ -10,9 +10,10 @@ __DATE__ = "2022/11/21"
 import re
 import os
 from time import sleep
-from urllib.parse import urlparse,quote
+from urllib.parse import urlparse, quote
 from bs4 import BeautifulSoup
 import requests
+
 
 class Paper:
     '''
@@ -22,12 +23,16 @@ class Paper:
     def __init__(self, key_words):
         self.dois = []
         self.key_words = key_words
-        os.system("mkdir "+ "'"+ key_words+"'")
-        os.chdir("./"+key_words)
+        os.system("mkdir " + '"' + key_words+'"')
+        try:
+            os.chdir("./"+key_words)
+        except (FileNotFoundError):
+            print("WARNING: Failed to change directionary, continue...")
 
     def FindDoi(self):
         session = requests.session()
-        burp0_url = "https://pubmed.ncbi.nlm.nih.gov:443/?term="+quote(self.key_words)
+        burp0_url = "https://pubmed.ncbi.nlm.nih.gov:443/?term=" + \
+            quote(self.key_words)
         burp0_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                          "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
         try:
@@ -45,7 +50,10 @@ class Paper:
             print(self.dois)
 
         except (AttributeError):
+            print("WARNING: No result for the Keywords, canceled...")
             pass
+        except:
+            print("ERROR: Please Restart the script, canceled...")
 
     def DoiParser(self, doi):
         # print()
@@ -80,13 +88,16 @@ class Paper:
             with open(file_name, 'wb') as f:
                 f.write(res.content)
         except (AttributeError):
-            print(doi+" not in Sci-Hub databases!")
+            print("WARNING: "+doi+" not in Sci-Hub databases!")
+            print("Download Failed...")
+        except (ConnectionResetError):
+            print("WARNING: ConnectionResetError!")
             print("Download Failed...")
 
 
 if __name__ == "__main__":
     # paper = Paper("")
-    key_words=str(input("Please Input Your Keywords >"))
+    key_words = str(input("Please Input Your Keywords >"))
     # print(key_words)
     paper = Paper(key_words)
     paper.FindDoi()
