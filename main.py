@@ -4,6 +4,8 @@ main.py
 --- Paper Module
 --- Search  Module
 
+__AUTHOR__ = "Yiming Shen, HNU"
+__DATE__ = "2022/11/21"
 '''
 import re
 import os
