@@ -9,6 +9,7 @@ __DATE__ = "2022/11/21"
 '''
 import re
 import os
+import threading
 from time import sleep
 from urllib.parse import urlparse, quote
 from bs4 import BeautifulSoup
@@ -37,7 +38,7 @@ class Paper:
                          "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
         try:
             response = session.get(burp0_url, headers=burp0_headers)
-            soup = BeautifulSoup(response.content, "lxml")
+            soup = BeautifulSoup(response.content, "html.parser")
             docsum_journal = soup.find_all(
                 attrs={'class': 'docsum-journal-citation full-journal-citation'})
             for citation in docsum_journal:
@@ -62,46 +63,94 @@ class Paper:
 
         return doi
 
-    def Download(self, doi):
-        # print(doi)
-        doi = self.DoiParser(doi)
-        base_url = "https://sci-hub.se"
-        burp0_url = "https://sci-hub.se/"+doi
-        burp0_cookies = {"__ddg1_": "wJV3PbFuLn2MDe58k8lw",
-                         "session": "de950defcb81e11958eaeeb6b114c3a9", "language": "cn", "refresh": "1668496934.2516"}
-        burp0_headers = {"Connection": "close", "Cache-Control": "max-age=0", "sec-ch-ua": "\"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\"", "Upgrade-Insecure-Requests": "1",
-                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-User": "?1", "Sec-Fetch-Dest": "document", "Referer": "https://sci-hub.se/", "Accept-Encoding": "gzip, deflate", "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"}
-        try:
-            response = requests.get(
-                burp0_url, headers=burp0_headers, cookies=burp0_cookies)
-            content = response.content
-            soup = BeautifulSoup(content, "html.parser")
-            # print(content)
-            embed = soup.embed
-            print(embed.attrs['src'])
-            download_url = base_url+embed.attrs['src']
-            print(download_url)
 
-            res = requests.get(download_url)
-            file_name = doi.split("/")[-1]+".pdf"
+class DownloadThread(threading.Thread):
+    def __init__(self, threadID, doi):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.doi = doi
 
-            with open(file_name, 'wb') as f:
-                f.write(res.content)
-        except (AttributeError):
-            print("WARNING: "+doi+" not in Sci-Hub databases!")
-            print("Download Failed...")
-        except (ConnectionResetError):
-            print("WARNING: ConnectionResetError!")
-            print("Download Failed...")
+    def run(self):
+        print("Thread running "+doi)
+        threadLock.acquire()
+        Download(self.doi)
+        threadLock.release()
+
+
+def Download(doi):
+    # print(doi)
+    base_url = "https://sci-hub.se"
+    burp0_url = "https://sci-hub.se/"+doi
+    burp0_cookies = {"__ddg1_": "wJV3PbFuLn2MDe58k8lw",
+                     "session": "de950defcb81e11958eaeeb6b114c3a9", "language": "cn", "refresh": "1668496934.2516"}
+    burp0_headers = {"Connection": "close", "Cache-Control": "max-age=0", "sec-ch-ua": "\"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\"", "Upgrade-Insecure-Requests": "1",
+                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-User": "?1", "Sec-Fetch-Dest": "document", "Referer": "https://sci-hub.se/", "Accept-Encoding": "gzip, deflate", "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"}
+    try:
+        response = requests.get(
+            burp0_url, headers=burp0_headers, cookies=burp0_cookies)
+        content = response.content
+        soup = BeautifulSoup(content, "html.parser")
+        # print(content)
+        embed = soup.find_all(
+            attrs={'id': 'pdf'})
+        if (embed == []):
+            raise AttributeError
+        download_url = base_url+embed[-1].attrs['src']
+
+        download_url = embed[-1].attrs['src']
+        download_url = "https://" + \
+            download_url[2:] if download_url[0:2] == "//" else base_url+download_url
+        print(download_url)
+
+        res = requests.get(download_url)
+        file_name = doi.split("/")[-1]+".pdf"
+        print("Save as "+file_name+'...')
+        with open(file_name, 'wb') as f:
+            f.write(res.content)
+        sleep(0.23)
+    except (AttributeError):
+        print("WARNING: "+doi+" not in Sci-Hub databases!")
+        print("Download Failed...")
+        sleep(0.23)
+    except (IndexError):
+        print("WARNING: "+doi+" not in Sci-Hub databases!")
+        print("Download Failed...")
+        sleep(0.23)
+    except (ConnectionResetError):
+        print("WARNING: ConnectionResetError!")
+        print("Download Failed...")
+
+
+def TestDownload(doi):
+    session = requests.session()
+    burp0_url = "https://sci-hub.se/"+doi
+    burp0_headers = {"Connection": "close", "Cache-Control": "max-age=0", "sec-ch-ua": "\"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\"", "Upgrade-Insecure-Requests": "1",
+                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-User": "?1", "Sec-Fetch-Dest": "document", "Referer": "https://sci-hub.se/", "Accept-Encoding": "gzip, deflate", "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"}
+    response = session.get(burp0_url, headers=burp0_headers)
+    soup = BeautifulSoup(response.content, "html.parser")
+    # print(soup.prettify())
+    article = soup.find_all(
+        attrs={'id': 'pdf'})
+    print(article[-1]['src'])
 
 
 if __name__ == "__main__":
-    # paper = Paper("")
+
     key_words = str(input("Please Input Your Keywords >"))
-    # print(key_words)
     paper = Paper(key_words)
     paper.FindDoi()
+
     # paper.dois = ["10.1080/20961790.2018.1503526"]
+    # TestDownload("10.1155/2018/4302425")
+
+    threadLock = threading.Lock()
+    threads = []
+    ID = 0
     for doi in paper.dois:
-        paper.Download(doi)
-        sleep(3.23)
+        thread = DownloadThread(ID, doi)
+        thread.start()
+        threads.append(thread)
+        ID += 1
+    for t in threads:
+        t.join()
+    print("Finished.")
