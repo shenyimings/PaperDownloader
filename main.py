@@ -70,55 +70,58 @@ class DownloadThread(threading.Thread):
         self.threadID = threadID
         self.doi = doi
 
+    def Download(self):
+        # print(doi)
+        doi = self.doi
+        session = requests.session()
+        base_url = "https://sci-hub.se"
+        burp0_url = "https://sci-hub.se/"+doi
+        # burp0_cookies = {"__ddg5_": "idLymXkgwBx0AcJU",
+        #  "session": "de950defcb81e11958eaeeb6b114c3a9", "language": "cn", "refresh": "1668496934.2516"}
+        burp0_cookies = session.get("https://sci-hub.se").cookies
+        burp0_headers = {"Connection": "close", "Cache-Control": "max-age=0", "sec-ch-ua": "\"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\"", "Upgrade-Insecure-Requests": "1",
+                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-User": "?1", "Sec-Fetch-Dest": "document", "Referer": "https://sci-hub.se/", "Accept-Encoding": "gzip, deflate", "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"}
+        try:
+            response = session.get(
+                burp0_url, headers=burp0_headers)
+            content = response.content
+            soup = BeautifulSoup(content, "html.parser")
+            # print(content)
+            embed = soup.find_all(
+                attrs={'id': 'pdf'})
+            if (embed == []):
+                raise AttributeError
+            download_url = base_url+embed[-1].attrs['src']
+
+            download_url = embed[-1].attrs['src']
+            download_url = "https://" + \
+                download_url[2:] if download_url[0:2] == "//" else base_url+download_url
+            print(download_url)
+
+            res = requests.get(download_url)
+            file_name = doi.split("/")[-1]+".pdf"
+            print("Save as "+file_name+'...')
+            with open(file_name, 'wb') as f:
+                f.write(res.content)
+            sleep(3.23)
+        except (AttributeError):
+            print("WARNING: "+doi+" not in Sci-Hub databases! or DDOS Guard Banned!")
+            print("Download Failed...")
+            sleep(1.67)
+        except (IndexError):
+            print("WARNING: "+doi+" not in Sci-Hub databases!")
+            print("Download Failed...")
+            sleep(3.23)
+        except (ConnectionResetError):
+            print("WARNING: ConnectionResetError!")
+            print("Download Failed...")
+            sleep(4.32)
+
     def run(self):
         print("Thread running "+doi)
         threadLock.acquire()
-        Download(self.doi)
+        self.Download()
         threadLock.release()
-
-
-def Download(doi):
-    # print(doi)
-    base_url = "https://sci-hub.se"
-    burp0_url = "https://sci-hub.se/"+doi
-    burp0_cookies = {"__ddg1_": "wJV3PbFuLn2MDe58k8lw",
-                     "session": "de950defcb81e11958eaeeb6b114c3a9", "language": "cn", "refresh": "1668496934.2516"}
-    burp0_headers = {"Connection": "close", "Cache-Control": "max-age=0", "sec-ch-ua": "\"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\"", "Upgrade-Insecure-Requests": "1",
-                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-User": "?1", "Sec-Fetch-Dest": "document", "Referer": "https://sci-hub.se/", "Accept-Encoding": "gzip, deflate", "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"}
-    try:
-        response = requests.get(
-            burp0_url, headers=burp0_headers, cookies=burp0_cookies)
-        content = response.content
-        soup = BeautifulSoup(content, "html.parser")
-        # print(content)
-        embed = soup.find_all(
-            attrs={'id': 'pdf'})
-        if (embed == []):
-            raise AttributeError
-        download_url = base_url+embed[-1].attrs['src']
-
-        download_url = embed[-1].attrs['src']
-        download_url = "https://" + \
-            download_url[2:] if download_url[0:2] == "//" else base_url+download_url
-        print(download_url)
-
-        res = requests.get(download_url)
-        file_name = doi.split("/")[-1]+".pdf"
-        print("Save as "+file_name+'...')
-        with open(file_name, 'wb') as f:
-            f.write(res.content)
-        sleep(0.23)
-    except (AttributeError):
-        print("WARNING: "+doi+" not in Sci-Hub databases!")
-        print("Download Failed...")
-        sleep(0.23)
-    except (IndexError):
-        print("WARNING: "+doi+" not in Sci-Hub databases!")
-        print("Download Failed...")
-        sleep(0.23)
-    except (ConnectionResetError):
-        print("WARNING: ConnectionResetError!")
-        print("Download Failed...")
 
 
 def TestDownload(doi):
@@ -139,10 +142,8 @@ if __name__ == "__main__":
     key_words = str(input("Please Input Your Keywords >"))
     paper = Paper(key_words)
     paper.FindDoi()
-
     # paper.dois = ["10.1080/20961790.2018.1503526"]
     # TestDownload("10.1155/2018/4302425")
-
     threadLock = threading.Lock()
     threads = []
     ID = 0
