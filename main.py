@@ -2,7 +2,13 @@
 main.py
 
 --- Paper Module
---- Search  Module
+------- FindDoi Function
+------- DoiParser Function
+
+--- DownloadThread Module
+------ Download Function
+
+--- TestDownload Function
 
 __AUTHOR__ = "Yiming Shen, HNU"
 __DATE__ = "2022/11/21"
@@ -19,6 +25,7 @@ import requests
 class Paper:
     '''
     Paper Class
+    Search Papers' DOI which matches the keywords
     '''
 
     def __init__(self, key_words):
@@ -65,6 +72,12 @@ class Paper:
 
 
 class DownloadThread(threading.Thread):
+    '''
+    DownloadThread Class inherits threading.Thread
+    Running a paper download thread from the dois result in Paper class
+
+    '''
+
     def __init__(self, threadID, doi):
         threading.Thread.__init__(self)
         self.threadID = threadID
@@ -125,6 +138,9 @@ class DownloadThread(threading.Thread):
 
 
 def TestDownload(doi):
+    '''
+    To Test the reason for downloading failure.
+    '''
     session = requests.session()
     burp0_url = "https://sci-hub.se/"+doi
     burp0_headers = {"Connection": "close", "Cache-Control": "max-age=0", "sec-ch-ua": "\"Google Chrome\";v=\"107\", \"Chromium\";v=\"107\", \"Not=A?Brand\";v=\"24\"", "sec-ch-ua-mobile": "?0", "sec-ch-ua-platform": "\"Windows\"", "Upgrade-Insecure-Requests": "1",
@@ -138,11 +154,10 @@ def TestDownload(doi):
 
 
 if __name__ == "__main__":
-
     key_words = str(input("Please Input Your Keywords >"))
     paper = Paper(key_words)
     paper.FindDoi()
-    # paper.dois = ["10.1080/20961790.2018.1503526"]
+    # example: paper.dois = ["10.1080/20961790.2018.1503526"]
     # TestDownload("10.1155/2018/4302425")
     threadLock = threading.Lock()
     threads = []
