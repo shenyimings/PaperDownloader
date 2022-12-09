@@ -26,6 +26,10 @@ Please Input Your Keywords >CTF
 - Downloader            Done.
 - Paper Finder          Done.
 
+## Some Problems
 
+Sci-Hub deploy DDGuard to Anti DDos attack or high speed spider, this may cause error when downloading.
+
+we use 3 mirror website of Sci-Hub to decrease and distribute the visits, and this may download invalid file, which may differ from mirror to mirror. 
 
 **For Course homework Only.**
