@@ -3,6 +3,8 @@ A Paper Downloader Powered By Sci-Hub, For Research
 
 > Feature：Input keywords and it'll find Science Papers around the topic sorted by Times Sited, then get them down to your PC via Sci-Hub.
 
+这是申一鸣的高级语言程序设计课设
+
 ## Use
 
 Install Requirements:
